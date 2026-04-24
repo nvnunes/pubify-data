@@ -15,6 +15,7 @@ Package-owned:
 - neutral figure, stat, and table result models
 - reusable CLI command registry and core list/update command helpers
 - pinned data path helpers through downstream-provided data-root resolvers
+- neutral artifact namespace helpers under downstream-provided data roots
 
 Downstream-owned:
 

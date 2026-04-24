@@ -3,7 +3,13 @@
 from .adapters import ArtifactWriter, PublicationAdapter, WorkspaceAdapter
 from .cli import CommandRegistry, CoreCommandContext, register_core_commands
 from .config import PubifyConfig, find_workspace_root, load_config_section, load_pubify_config
-from .data import load_publication_data_npz, publication_data_path, save_publication_data_npz
+from .data import (
+    artifact_namespace_path,
+    artifact_namespace_root,
+    load_publication_data_npz,
+    publication_data_path,
+    save_publication_data_npz,
+)
 from .decorators import data, external_data, figure, stat, table
 from .discovery import (
     FigureSpec,
@@ -48,6 +54,8 @@ __all__ = [
     "TableSpec",
     "UserCodeExecutionError",
     "WorkspaceAdapter",
+    "artifact_namespace_path",
+    "artifact_namespace_root",
     "build_run_context",
     "data",
     "discover_publication",

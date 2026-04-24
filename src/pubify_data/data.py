@@ -8,6 +8,35 @@ import numpy as np
 DataRootResolver = Callable[[Path, str], Path]
 
 
+def artifact_namespace_root(
+    data_root: Path,
+    namespace: str,
+    *,
+    create: bool = False,
+) -> Path:
+    """Resolve a framework-owned artifact namespace under a publication data root."""
+
+    root = Path(data_root) / _validate_publication_relative_path(namespace)
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def artifact_namespace_path(
+    data_root: Path,
+    namespace: str,
+    relative_path: str,
+    *,
+    create_parent: bool = False,
+) -> Path:
+    """Resolve one artifact path under a framework-owned namespace."""
+
+    path = artifact_namespace_root(data_root, namespace) / _validate_publication_relative_path(relative_path)
+    if create_parent:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def publication_data_path(
     publication_id: str,
     relative_path: str,

@@ -8,3 +8,7 @@ Use `PublicationAdapter` and `WorkspaceAdapter` to pass resolved downstream
 paths into the runtime. Use `CommandRegistry` and `register_core_commands(...)`
 when a downstream CLI wants to reuse neutral list/update behavior while keeping
 format-specific commands local.
+
+Use `artifact_namespace_root(...)` and `artifact_namespace_path(...)` when a
+downstream needs validated framework-owned artifact paths under its resolved
+publication data root.

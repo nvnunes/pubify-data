@@ -17,6 +17,8 @@ Primary public entrypoints are:
 - adapter contracts: `WorkspaceAdapter`, `PublicationAdapter`, `ArtifactWriter`
 - discovery helpers: `load_publication_from_entrypoint`, `discover_publication`
 - runtime helpers: `build_run_context`, `resolve_loader`, `validate_dependencies`, `run_figures`, `run_stats`, `run_tables`
+- data helpers: `publication_data_path`, `save_publication_data_npz`, `load_publication_data_npz`
+- artifact namespace helpers: `artifact_namespace_root`, `artifact_namespace_path`
 - result models: `FigureResult`, `FigurePanel`, `StatResult`, `TableResult`
 - CLI helpers: `CommandRegistry`, `CoreCommandContext`, `register_core_commands`
 
@@ -51,6 +53,12 @@ publication = load_publication_from_entrypoint(publication_id, adapter=adapter)
 `pubify-data` must not infer downstream root names such as
 `publications_root`, `data_root`, `tex`, `autofigures`, or build directories.
 Those names belong to downstream packages.
+
+Downstreams may use `artifact_namespace_root(...)` and
+`artifact_namespace_path(...)` to reserve generated-artifact namespaces under a
+resolved publication `data_root`. These helpers only validate and join paths;
+they do not define artifact names, formats, lifecycle, or manuscript-facing
+views.
 
 ## Reusable CLI Composition
 

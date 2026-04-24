@@ -11,6 +11,8 @@ from pubify_data import (
     CoreCommandContext,
     PublicationAdapter,
     UserCodeExecutionError,
+    artifact_namespace_path,
+    artifact_namespace_root,
     build_run_context,
     data,
     figure,
@@ -44,6 +46,31 @@ def test_config_loads_namespaced_sections(tmp_path: Path) -> None:
 
     assert loaded.section("pubify-pubs") == {"publications_root": "papers"}
     assert load_config_section(tmp_path, "missing") == {}
+
+
+def test_artifact_namespace_helpers_resolve_under_supplied_data_root(tmp_path: Path) -> None:
+    data_root = tmp_path / "paper" / "data"
+
+    namespace_root = artifact_namespace_root(data_root, "derived/artifacts", create=True)
+    artifact_path = artifact_namespace_path(data_root, "derived/artifacts", "figures/example.pdf", create_parent=True)
+
+    assert namespace_root == data_root / "derived" / "artifacts"
+    assert namespace_root.exists()
+    assert artifact_path == data_root / "derived" / "artifacts" / "figures" / "example.pdf"
+    assert artifact_path.parent.exists()
+
+
+def test_artifact_namespace_helpers_reject_paths_outside_data_root(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+
+    with pytest.raises(ValueError, match="must be relative, not absolute"):
+        artifact_namespace_root(data_root, "/absolute")
+    with pytest.raises(ValueError, match="must stay under the publication data root"):
+        artifact_namespace_root(data_root, "../outside")
+    with pytest.raises(ValueError, match="must be relative, not absolute"):
+        artifact_namespace_path(data_root, "artifacts", "/absolute")
+    with pytest.raises(ValueError, match="must stay under the publication data root"):
+        artifact_namespace_path(data_root, "artifacts", "../outside")
 
 
 def test_decorators_and_runtime_execute_loader_dependencies(tmp_path: Path) -> None:
