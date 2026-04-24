@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.conda/
+.pytest_cache/
+site/
+dist/
+build/
+*.egg-info/

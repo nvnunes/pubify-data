@@ -1,0 +1,17 @@
+site_name: pubify-data
+site_description: TeX-agnostic publication data and artifact runtime
+repo_url: https://github.com/nvnunes/pubify-data
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - API: api.md
+  - Development: development.md
+  - Testing: testing.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
