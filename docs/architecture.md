@@ -23,3 +23,66 @@ Primary public entrypoints are:
 ## Downstream Adapters
 
 Downstream packages own roots and artifact output. They pass a resolved `PublicationAdapter` and optional `ArtifactWriter` callbacks into `pubify-data` rather than relying on package-wide root assumptions.
+
+The expected adapter flow is:
+
+1. A downstream package finds its workspace and parses its own config section.
+2. It resolves publication roots, the entrypoint path, the pinned data root, and
+   any named external data roots.
+3. It builds a `WorkspaceAdapter` and `PublicationAdapter`.
+4. It calls `load_publication_from_entrypoint(...)`.
+5. It runs neutral runtime helpers and converts neutral results into
+   downstream-specific files, renderers, or build artifacts.
+
+For example:
+
+```python
+adapter = PublicationAdapter(
+    publication_id=publication_id,
+    publication_root=publication_root,
+    entrypoint=publication_root / "figures.py",
+    data_root=data_root,
+    external_data_roots=external_data_roots,
+    workspace=WorkspaceAdapter(workspace_root, config=workspace_config),
+)
+publication = load_publication_from_entrypoint(publication_id, adapter=adapter)
+```
+
+`pubify-data` must not infer downstream root names such as
+`publications_root`, `data_root`, `tex`, `autofigures`, or build directories.
+Those names belong to downstream packages.
+
+## Reusable CLI Composition
+
+`CommandRegistry` is a small dispatch layer for downstream CLIs. It lets a
+downstream package reuse neutral list/update flows while keeping executable
+names and format-specific commands outside `pubify-data`.
+
+```python
+registry = CommandRegistry()
+register_core_commands(registry)
+
+context = CoreCommandContext(
+    publication=publication,
+    artifact_writer=artifact_writer,
+    loader_cache=loader_cache,
+)
+status = registry.dispatch(context, tuple(argv))
+```
+
+The reusable commands are:
+
+- `data list`
+- `figure list`
+- `figure update`
+- `stat list`
+- `stat update`
+- `table list`
+- `table update`
+- `update`
+
+Downstream packages remain responsible for user-facing command names, argument
+parsing, output formatting, preview/build/shell behavior, and persistence. If a
+downstream wants neutral update commands to write files, it supplies an
+`ArtifactWriter` that converts neutral figure/stat/table results into its own
+artifact format.

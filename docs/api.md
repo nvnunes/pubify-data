@@ -32,4 +32,6 @@
 
 ::: pubify_data.CommandRegistry
 
+::: pubify_data.CoreCommandContext
+
 ::: pubify_data.register_core_commands
