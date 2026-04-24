@@ -170,11 +170,24 @@ def _capture_loader_output(ctx: RunContext, loader_id: str, func: object, *args:
     buffer = io.StringIO()
     try:
         with redirect_stdout(buffer), redirect_stderr(buffer):
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
     except Exception as exc:
         output_lines = buffer.getvalue().splitlines()
         detail_lines = [f"Loader '{loader_id}' failed: {exc}", *output_lines, *traceback.format_exception_only(type(exc), exc)]
         raise UserCodeExecutionError(detail_lines) from exc
+    else:
+        if result is None:
+            lines = buffer.getvalue().splitlines()
+            lines.append(f"Loader '{loader_id}' returned None. Loaders must return one object.")
+            raise UserCodeExecutionError(lines)
+        if isinstance(result, tuple):
+            lines = buffer.getvalue().splitlines()
+            lines.append(
+                f"Loader '{loader_id}' returned a tuple. Loaders must return one object; "
+                "wrap multiple values in a dict, dataclass, or other single container."
+            )
+            raise UserCodeExecutionError(lines)
+        return result
     finally:
         lines = buffer.getvalue().splitlines()
         if lines:

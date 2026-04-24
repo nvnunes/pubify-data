@@ -33,9 +33,21 @@ class ComputedTable:
 def compute_table(table_id: str, result: object) -> ComputedTable:
     """Normalize one table result."""
 
-    if not isinstance(result, TableResult):
+    if isinstance(result, TableResult):
+        return ComputedTable(table_id=table_id, width=result.width, bodies=result.bodies, metadata=result.metadata)
+    bodies = getattr(result, "bodies", None)
+    width = getattr(result, "width", None)
+    if bodies is None or width is None:
         raise ValueError(f"Table '{table_id}' must return TableResult(...)")
-    return ComputedTable(table_id=table_id, width=result.width, bodies=result.bodies, metadata=result.metadata)
+    metadata = getattr(result, "metadata", {})
+    if metadata is None:
+        metadata = {}
+    if not isinstance(metadata, dict):
+        raise ValueError(f"Table '{table_id}' metadata must be a dict when set")
+    normalized = TableResult(bodies, metadata=dict(metadata))
+    if width != normalized.width:
+        raise ValueError(f"Table '{table_id}' width does not match normalized table body width")
+    return ComputedTable(table_id=table_id, width=normalized.width, bodies=normalized.bodies, metadata=normalized.metadata)
 
 
 def _normalize_table_data(data: object) -> tuple[tuple[tuple[object, ...], ...], ...]:

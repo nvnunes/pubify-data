@@ -18,7 +18,9 @@ from pubify_data import (
     register_core_commands,
     run_figures,
     run_stats,
+    run_tables,
     stat,
+    table,
     validate_dependencies,
 )
 from pubify_data.config import load_config_section, load_pubify_config
@@ -187,6 +189,58 @@ def test_user_code_errors_include_captured_output(tmp_path: Path) -> None:
 
     assert "Loader 'sample' failed: broken loader" in exc_info.value.lines
     assert "loader before failure" in exc_info.value.lines
+
+
+def test_loader_tuple_return_is_user_code_error(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    (data_root / "sample.txt").write_text("value", encoding="utf-8")
+    entrypoint = tmp_path / "figures.py"
+    entrypoint.write_text(
+        "\n".join([
+            "from pubify_data import data, figure",
+            "@data('sample.txt')",
+            "def load_sample(ctx, path):",
+            "    return ('a', 'b')",
+            "@figure",
+            "def plot_demo(ctx, sample):",
+            "    return sample",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter("demo", entrypoint=entrypoint, data_root=data_root)
+    publication = load_publication_from_entrypoint("demo", adapter=adapter)
+
+    with pytest.raises(UserCodeExecutionError) as exc_info:
+        run_figures(publication)
+
+    assert "Loader 'sample' returned a tuple." in str(exc_info.value)
+
+
+def test_tables_accept_downstream_table_like_result_with_metadata(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    entrypoint = tmp_path / "tables.py"
+    entrypoint.write_text(
+        "\n".join([
+            "from pubify_data import table",
+            "class DownstreamTable:",
+            "    bodies = (((1, 2),),)",
+            "    width = 2",
+            "    metadata = {'formats': ('{:.1f}', '{}')}",
+            "@table",
+            "def tabulate_demo(ctx):",
+            "    return DownstreamTable()",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter("demo", entrypoint=entrypoint, data_root=data_root)
+    publication = load_publication_from_entrypoint("demo", adapter=adapter)
+
+    computed = run_tables(publication)[0]
+
+    assert computed.bodies == (((1, 2),),)
+    assert computed.metadata == {"formats": ("{:.1f}", "{}")}
 
 
 def test_command_registry_dispatches_core_commands_and_writes_results(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
