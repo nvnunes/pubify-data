@@ -19,7 +19,7 @@ Primary public entrypoints are:
 - runtime helpers: `build_run_context`, `resolve_loader`, `validate_dependencies`, `run_figures`, `run_stats`, `run_tables`
 - data helpers: `publication_data_path`, `save_publication_data_npz`, `load_publication_data_npz`
 - artifact namespace helpers: `artifact_namespace_root`, `artifact_namespace_path`
-- result models: `FigureResult`, `FigurePanel`, `StatResult`, `TableResult`
+- result models: `BaseFigureResult`, `FigurePanel`, `BaseStatResult`, `BaseTableResult`
 - CLI helpers: `CommandRegistry`, `CoreCommandContext`, `register_core_commands`
 
 ## Downstream Adapters
@@ -49,6 +49,12 @@ adapter = PublicationAdapter(
 )
 publication = load_publication_from_entrypoint(publication_id, adapter=adapter)
 ```
+
+`PublicationAdapter.source_roots` may declare other pubify publication roots as
+code dependencies. Source outputs are accessed through
+`ctx.source("<source-id>")` inside local wrapper functions; `pubify-data` does
+not expose source-qualified artifact IDs as downstream-facing figure/stat/table
+IDs.
 
 `pubify-data` must not infer downstream root names such as
 `publications_root`, `data_root`, `tex`, `autofigures`, or build directories.

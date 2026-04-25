@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -19,9 +19,27 @@ class ComputedStat:
     values: tuple[StatValue, ...]
 
 
+@dataclass(frozen=True, init=False)
+class BaseStatResult:
+    """Neutral logical stat payload."""
+
+    values: tuple[StatValue, ...]
+    metadata: dict[str, object] = field(default_factory=dict)
+
+    def __init__(self, result: object, *, metadata: dict[str, object] | None = None) -> None:
+        object.__setattr__(
+            self,
+            "values",
+            tuple(StatValue(key, value) for key, value in normalize_stat_result("stat", result)),
+        )
+        object.__setattr__(self, "metadata", dict(metadata or {}))
+
+
 def normalize_stat_result(stat_id: str, result: object) -> tuple[tuple[str | None, str], ...]:
     """Normalize one stat return value into ``(key, value)`` pairs."""
 
+    if isinstance(result, BaseStatResult):
+        return tuple((value.key, value.value) for value in result.values)
     if not isinstance(result, dict):
         return ((None, _coerce_stat_value(stat_id, result)),)
     if not result:

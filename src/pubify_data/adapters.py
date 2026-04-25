@@ -38,6 +38,7 @@ class PublicationAdapter:
     data_root: Path
     publication_root: Path | None = None
     external_data_roots: Mapping[str, Path | str] = field(default_factory=dict)
+    source_roots: Mapping[str, Path | str] = field(default_factory=dict)
     workspace: WorkspaceAdapter | None = None
 
     def __post_init__(self) -> None:
@@ -47,10 +48,12 @@ class PublicationAdapter:
         publication_root = Path(self.publication_root).expanduser() if self.publication_root is not None else entrypoint.parent
         data_root = Path(self.data_root).expanduser()
         external_data_roots = _normalize_external_roots(self.external_data_roots)
+        source_roots = _normalize_source_roots(self.source_roots, publication_root, self.workspace)
         object.__setattr__(self, "entrypoint", entrypoint)
         object.__setattr__(self, "publication_root", publication_root)
         object.__setattr__(self, "data_root", data_root)
         object.__setattr__(self, "external_data_roots", external_data_roots)
+        object.__setattr__(self, "source_roots", source_roots)
 
 
 class ArtifactWriter(Protocol):
@@ -83,6 +86,7 @@ def publication_adapter_from_legacy(
         entrypoint=entrypoint,
         data_root=Path(data_root),
         external_data_roots=getattr(config, "external_data_roots", {}),
+        source_roots=getattr(config, "sources", {}),
     )
 
 
@@ -92,4 +96,21 @@ def _normalize_external_roots(external_data_roots: Mapping[str, Path | str]) -> 
         if not isinstance(name, str) or not name:
             raise ValueError("External data root names must be non-empty strings")
         normalized[name] = Path(root).expanduser()
+    return normalized
+
+
+def _normalize_source_roots(
+    source_roots: Mapping[str, Path | str],
+    publication_root: Path,
+    workspace: WorkspaceAdapter | None,
+) -> dict[str, Path]:
+    normalized: dict[str, Path] = {}
+    for name, root in source_roots.items():
+        if not isinstance(name, str) or not name:
+            raise ValueError("Source publication names must be non-empty strings")
+        root_path = Path(root).expanduser()
+        if not root_path.is_absolute():
+            base = workspace.workspace_root if workspace is not None else publication_root
+            root_path = (base / root_path).resolve()
+        normalized[name] = root_path
     return normalized

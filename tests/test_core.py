@@ -7,6 +7,9 @@ import numpy as np
 import pytest
 
 from pubify_data import (
+    BaseFigureResult,
+    BaseStatResult,
+    BaseTableResult,
     CommandRegistry,
     CoreCommandContext,
     PublicationAdapter,
@@ -22,6 +25,7 @@ from pubify_data import (
     run_stats,
     run_tables,
     stat,
+    stat_ids,
     table,
     validate_dependencies,
 )
@@ -97,6 +101,97 @@ def test_decorators_and_runtime_execute_loader_dependencies(tmp_path: Path) -> N
 
     assert run_figures(publication)[0][1].panels[0].payload == "value"
     assert run_stats(publication)[0].values[0].value == "value"
+
+
+def test_base_result_types_normalize_figures_stats_and_tables(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    entrypoint = tmp_path / "figures.py"
+    entrypoint.write_text(
+        "\n".join([
+            "from pubify_data import BaseFigureResult, BaseStatResult, BaseTableResult, figure, stat, table",
+            "@figure",
+            "def plot_demo(ctx):",
+            "    return BaseFigureResult(['left', 'right'], layout='two', metadata={'caption_lines': 2})",
+            "@stat",
+            "def compute_demo(ctx):",
+            "    return BaseStatResult({'mean': '42'}, metadata={'format': 'text'})",
+            "@table",
+            "def tabulate_demo(ctx):",
+            "    return BaseTableResult([['A', 'B']], metadata={'formats': ('{}', '{}')})",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter("demo", entrypoint=entrypoint, data_root=data_root)
+    publication = load_publication_from_entrypoint("demo", adapter=adapter)
+
+    figure_result = run_figures(publication)[0][1]
+    stat_result = run_stats(publication)[0]
+    table_result = run_tables(publication)[0]
+
+    assert isinstance(figure_result, BaseFigureResult)
+    assert figure_result.layout == "two"
+    assert [panel.payload for panel in figure_result.panels] == ["left", "right"]
+    assert stat_result.values[0].key == "mean"
+    assert stat_result.values[0].value == "42"
+    assert table_result.bodies == ((("A", "B"),),)
+    assert table_result.metadata == {"formats": ("{}", "{}")}
+
+
+def test_source_publications_are_reused_through_local_wrapper_code(tmp_path: Path) -> None:
+    source_root = tmp_path / "papers" / "ao4elt8"
+    source_data = source_root / "data"
+    source_data.mkdir(parents=True)
+    (source_data / "value.txt").write_text("source", encoding="utf-8")
+    (source_root / "figures.py").write_text(
+        "\n".join([
+            "from pubify_data import data, figure, stat",
+            "@data('value.txt')",
+            "def load_value(ctx, path):",
+            "    return path.read_text(encoding='utf-8')",
+            "@figure",
+            "def plot_map(ctx, value):",
+            "    return ['first', value]",
+            "@stat",
+            "def compute_summary(ctx, value):",
+            "    return {'value': value}",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    presentation_root = tmp_path / "slides" / "talk"
+    presentation_data = presentation_root / "data"
+    presentation_data.mkdir(parents=True)
+    entrypoint = presentation_root / "figures.py"
+    entrypoint.write_text(
+        "\n".join([
+            "from pubify_data import figure, stat",
+            "@figure",
+            "def plot_local(ctx):",
+            "    return 'local'",
+            "@figure",
+            "def plot_reused(ctx):",
+            "    return ctx.source('ao4elt8').figure('map').panel(2)",
+            "@stat",
+            "def compute_reused(ctx):",
+            "    return ctx.source('ao4elt8').stat('summary').values[0].value",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter(
+        "talk",
+        entrypoint=entrypoint,
+        publication_root=presentation_root,
+        data_root=presentation_data,
+        source_roots={"ao4elt8": source_root},
+    )
+    publication = load_publication_from_entrypoint("talk", adapter=adapter)
+
+    assert [artifact_id for artifact_id, _ in run_figures(publication)] == ["local", "reused"]
+    assert run_figures(publication, "reused")[0][1].panels[0].payload == "source"
+    with pytest.raises(KeyError, match="Unknown figure"):
+        run_figures(publication, "ao4elt8.map")
+    assert stat_ids(publication) == ("reused",)
+    assert run_stats(publication, "reused")[0].values[0].value == "source"
 
 
 def test_publication_adapter_supports_custom_downstream_root_layout(tmp_path: Path) -> None:

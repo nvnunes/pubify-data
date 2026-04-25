@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, init=False)
-class TableResult:
+class BaseTableResult:
     """Neutral logical table payload."""
 
     bodies: tuple[tuple[tuple[object, ...], ...], ...]
@@ -33,7 +33,7 @@ class ComputedTable:
 def compute_table(table_id: str, result: object) -> ComputedTable:
     """Normalize one table result."""
 
-    if isinstance(result, TableResult):
+    if isinstance(result, BaseTableResult):
         return ComputedTable(table_id=table_id, width=result.width, bodies=result.bodies, metadata=result.metadata)
     bodies = getattr(result, "bodies", None)
     width = getattr(result, "width", None)
@@ -44,7 +44,7 @@ def compute_table(table_id: str, result: object) -> ComputedTable:
         metadata = {}
     if not isinstance(metadata, dict):
         raise ValueError(f"Table '{table_id}' metadata must be a dict when set")
-    normalized = TableResult(bodies, metadata=dict(metadata))
+    normalized = BaseTableResult(bodies, metadata=dict(metadata))
     if width != normalized.width:
         raise ValueError(f"Table '{table_id}' width does not match normalized table body width")
     return ComputedTable(table_id=table_id, width=normalized.width, bodies=normalized.bodies, metadata=normalized.metadata)

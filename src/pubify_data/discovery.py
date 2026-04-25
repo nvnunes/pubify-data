@@ -52,6 +52,7 @@ class PublicationDefinition:
     figures: dict[str, FigureSpec]
     stats: dict[str, StatSpec]
     tables: dict[str, TableSpec]
+    sources: dict[str, "PublicationDefinition"]
 
     @property
     def publication_root(self) -> Path:
@@ -105,7 +106,24 @@ def discover_publication(
         figures=_discover_figures(module),
         stats=_discover_stats(module),
         tables=_discover_tables(module),
+        sources=_load_source_publications(adapter),
     )
+
+
+def _load_source_publications(adapter: PublicationAdapter) -> dict[str, PublicationDefinition]:
+    sources: dict[str, PublicationDefinition] = {}
+    for source_id, source_root in adapter.source_roots.items():
+        entrypoint = source_root / "figures.py"
+        data_root = source_root / "data"
+        source_adapter = PublicationAdapter(
+            publication_id=source_id,
+            publication_root=source_root,
+            entrypoint=entrypoint,
+            data_root=data_root,
+            workspace=adapter.workspace,
+        )
+        sources[source_id] = load_publication_from_entrypoint(source_id, adapter=source_adapter)
+    return sources
 
 
 def _resolve_publication_adapter(

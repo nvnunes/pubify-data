@@ -20,19 +20,22 @@ from .discovery import (
     discover_publication,
     load_publication_from_entrypoint,
 )
-from .figures import FigurePanel, FigureResult, panel
+from .figures import BaseFigureResult, FigurePanel, panel
 from .runtime import (
     RunContext,
     UserCodeExecutionError,
     build_run_context,
+    figure_ids,
     resolve_loader,
     run_figures,
     run_stats,
     run_tables,
+    stat_ids,
+    table_ids,
     validate_dependencies,
 )
-from .stats import ComputedStat, StatValue
-from .tables import ComputedTable, TableResult
+from .stats import BaseStatResult, ComputedStat, StatValue
+from .tables import BaseTableResult, ComputedTable
 
 __all__ = [
     "ArtifactWriter",
@@ -40,8 +43,10 @@ __all__ = [
     "ComputedStat",
     "ComputedTable",
     "CoreCommandContext",
+    "BaseFigureResult",
+    "BaseStatResult",
+    "BaseTableResult",
     "FigurePanel",
-    "FigureResult",
     "FigureSpec",
     "LoaderSpec",
     "PublicationAdapter",
@@ -50,7 +55,6 @@ __all__ = [
     "RunContext",
     "StatSpec",
     "StatValue",
-    "TableResult",
     "TableSpec",
     "UserCodeExecutionError",
     "WorkspaceAdapter",
@@ -61,6 +65,7 @@ __all__ = [
     "discover_publication",
     "external_data",
     "figure",
+    "figure_ids",
     "find_workspace_root",
     "load_config_section",
     "load_publication_data_npz",
@@ -75,6 +80,8 @@ __all__ = [
     "run_tables",
     "save_publication_data_npz",
     "stat",
+    "stat_ids",
     "table",
+    "table_ids",
     "validate_dependencies",
 ]

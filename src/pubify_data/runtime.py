@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 import io
 from pathlib import Path
 import traceback
 
 from .discovery import PublicationDefinition
-from .figures import FigureResult, normalize_figure_result
+from .figures import BaseFigureResult, normalize_figure_result
 from .stats import ComputedStat, compute_stat
 from .tables import ComputedTable, compute_table
 
@@ -22,7 +22,15 @@ class RunContext:
     updated_loader_ids: set[str] = field(default_factory=set)
     captured_data_output: dict[str, list[str]] = field(default_factory=dict)
     captured_output: dict[str, list[str]] = field(default_factory=lambda: {"figure": [], "stat": [], "table": []})
+    source_contexts: dict[str, "RunContext"] = field(default_factory=dict)
     rc: object | None = None
+
+    def source(self, source_id: str) -> "SourcePublicationRuntime":
+        """Return a runtime accessor for a declared source publication."""
+
+        if source_id not in self.publication.sources:
+            raise KeyError(f"Unknown source publication '{source_id}'")
+        return SourcePublicationRuntime(self, source_id)
 
 
 class UserCodeExecutionError(RuntimeError):
@@ -33,10 +41,37 @@ class UserCodeExecutionError(RuntimeError):
         super().__init__(lines[-1] if lines else "Publication code execution failed")
 
 
+@dataclass(frozen=True)
+class SourcePublicationRuntime:
+    """Code-facing accessor for one source publication."""
+
+    ctx: RunContext
+    source_id: str
+
+    def figure(self, figure_id: str) -> BaseFigureResult:
+        """Run one figure from the source publication."""
+
+        source = self.ctx.publication.sources[self.source_id]
+        ((_, result),) = run_figures(source, figure_id, ctx=_source_context(self.ctx, self.source_id))
+        return result
+
+    def stat(self, stat_id: str) -> ComputedStat:
+        """Run one stat from the source publication."""
+
+        source = self.ctx.publication.sources[self.source_id]
+        return run_stats(source, stat_id, ctx=_source_context(self.ctx, self.source_id))[0]
+
+    def table(self, table_id: str) -> ComputedTable:
+        """Run one table from the source publication."""
+
+        source = self.ctx.publication.sources[self.source_id]
+        return run_tables(source, table_id, ctx=_source_context(self.ctx, self.source_id))[0]
+
+
 def build_run_context(publication: PublicationDefinition, *, loader_cache: dict[str, object] | None = None, rc: object | None = None) -> RunContext:
     """Create one command-scoped runtime context for a publication."""
 
-    return RunContext(publication=publication, loader_cache=loader_cache if loader_cache is not None else {}, rc=rc)
+    return RunContext(publication=publication, loader_cache=loader_cache if loader_cache is not None else {}, rc=rc or nullcontext())
 
 
 def preload_loaders(ctx: RunContext, loader_ids: tuple[str, ...], *, include_nocache: bool) -> None:
@@ -80,12 +115,12 @@ def resolve_loader(ctx: RunContext, loader_id: str) -> object:
     return resolved
 
 
-def run_figures(publication: PublicationDefinition, figure_id: str | None = None, ctx: RunContext | None = None) -> tuple[tuple[str, FigureResult], ...]:
+def run_figures(publication: PublicationDefinition, figure_id: str | None = None, ctx: RunContext | None = None) -> tuple[tuple[str, BaseFigureResult], ...]:
     """Run one or more figure functions and return neutral figure results."""
 
     run_ctx = ctx or build_run_context(publication)
     figure_ids = [figure_id] if figure_id is not None else sorted(publication.figures)
-    computed: list[tuple[str, FigureResult]] = []
+    computed: list[tuple[str, BaseFigureResult]] = []
     for current_id in figure_ids:
         if current_id not in publication.figures:
             raise KeyError(f"Unknown figure '{current_id}'")
@@ -141,7 +176,34 @@ def validate_dependencies(publication: PublicationDefinition) -> list[str]:
         for dep in table.dependency_ids:
             if dep not in publication.loaders:
                 errors.append(f"Table '{table.table_id}' depends on unknown loader '{dep}'")
+    for source_id, source in publication.sources.items():
+        for error in validate_dependencies(source):
+            errors.append(f"Source '{source_id}': {error}")
     return errors
+
+
+def figure_ids(publication: PublicationDefinition) -> tuple[str, ...]:
+    """Return local figure ids."""
+
+    return tuple(sorted(publication.figures))
+
+
+def stat_ids(publication: PublicationDefinition) -> tuple[str, ...]:
+    """Return local stat ids."""
+
+    return tuple(sorted(publication.stats))
+
+
+def table_ids(publication: PublicationDefinition) -> tuple[str, ...]:
+    """Return local table ids."""
+
+    return tuple(sorted(publication.tables))
+
+
+def _source_context(ctx: RunContext, source_id: str) -> RunContext:
+    if source_id not in ctx.source_contexts:
+        ctx.source_contexts[source_id] = build_run_context(ctx.publication.sources[source_id], rc=ctx.rc)
+    return ctx.source_contexts[source_id]
 
 
 def _loader_root(publication: PublicationDefinition, loader: object) -> Path:
