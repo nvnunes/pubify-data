@@ -173,7 +173,7 @@ def test_source_publications_are_reused_through_local_wrapper_code(tmp_path: Pat
             "    return ctx.source('ao4elt8').figure('map').panel(2)",
             "@stat",
             "def compute_reused(ctx):",
-            "    return ctx.source('ao4elt8').stat('summary').values[0].value",
+            "    return ctx.source('ao4elt8').stat('summary')",
         ]) + "\n",
         encoding="utf-8",
     )
@@ -249,6 +249,46 @@ def test_validate_dependencies_reports_missing_loaders(tmp_path: Path) -> None:
     publication = load_publication_from_entrypoint("demo", adapter=adapter)
 
     assert validate_dependencies(publication) == ["Figure 'demo' depends on unknown loader 'missing'"]
+
+
+def test_validate_dependencies_reports_undefined_external_data_roots(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    entrypoint = tmp_path / "figures.py"
+    entrypoint.write_text(
+        "\n".join([
+            "from pubify_data import external_data, stat",
+            "@external_data('missing', 'sample.txt')",
+            "def load_sample(ctx, path):",
+            "    return path.read_text(encoding='utf-8')",
+            "@stat",
+            "def compute_demo(ctx, sample):",
+            "    return sample",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter("demo", entrypoint=entrypoint, data_root=data_root)
+    publication = load_publication_from_entrypoint("demo", adapter=adapter)
+
+    assert validate_dependencies(publication) == ["Loader 'sample' references undefined external data root 'missing'"]
+
+
+def test_discovery_ignores_legacy_pubs_marker_names(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    entrypoint = tmp_path / "figures.py"
+    entrypoint.write_text(
+        "\n".join([
+            "def plot_legacy(ctx):",
+            "    return 'legacy'",
+            "plot_legacy.__pubs_figure__ = True",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    adapter = PublicationAdapter("demo", entrypoint=entrypoint, data_root=data_root)
+    publication = load_publication_from_entrypoint("demo", adapter=adapter)
+
+    assert publication.figures == {}
 
 
 def test_loader_cache_can_be_shared_across_run_contexts(tmp_path: Path) -> None:
@@ -401,6 +441,9 @@ def test_command_registry_dispatches_core_commands_and_writes_results(tmp_path: 
 
     assert registry.dispatch(CoreCommandContext(publication, artifact_writer=writer), ("figure", "update")) == 0
     assert writer.figures is not None
+
+    with pytest.raises(TypeError, match="Artifact writer must implement write_figures"):
+        registry.dispatch(CoreCommandContext(publication, artifact_writer=object()), ("figure", "update"))
 
 
 def test_npz_helpers_use_downstream_resolver(tmp_path: Path) -> None:

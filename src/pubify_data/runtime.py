@@ -164,6 +164,14 @@ def validate_dependencies(publication: PublicationDefinition) -> list[str]:
     """Return dependency errors without running user code."""
 
     errors: list[str] = []
+    for loader in publication.loaders.values():
+        if loader.kind == "external_data":
+            if loader.root_name is None:
+                errors.append(f"Loader '{loader.loader_id}' is missing external data root metadata")
+            elif loader.root_name not in publication.external_data_roots:
+                errors.append(f"Loader '{loader.loader_id}' references undefined external data root '{loader.root_name}'")
+        elif loader.kind != "data":
+            errors.append(f"Loader '{loader.loader_id}' uses unsupported loader kind '{loader.kind}'")
     for figure in publication.figures.values():
         for dep in figure.dependency_ids:
             if dep not in publication.loaders:

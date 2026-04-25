@@ -120,9 +120,11 @@ def _write(context: CoreCommandContext, group: str, results: object) -> None:
     writer = context.artifact_writer
     if writer is None:
         return
-    write_method = getattr(writer, f"write_{group}", None)
-    if callable(write_method):
-        write_method(results)
+    method_name = f"write_{group}"
+    write_method = getattr(writer, method_name, None)
+    if not callable(write_method):
+        raise TypeError(f"Artifact writer must implement {method_name}(results)")
+    write_method(results)
 
 
 def _loader_ids_for(specs: dict[str, object]) -> tuple[str, ...]:

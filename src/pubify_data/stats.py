@@ -17,6 +17,7 @@ class ComputedStat:
 
     stat_id: str
     values: tuple[StatValue, ...]
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, init=False)
@@ -38,6 +39,8 @@ class BaseStatResult:
 def normalize_stat_result(stat_id: str, result: object) -> tuple[tuple[str | None, str], ...]:
     """Normalize one stat return value into ``(key, value)`` pairs."""
 
+    if isinstance(result, ComputedStat):
+        return tuple((value.key, value.value) for value in result.values)
     if isinstance(result, BaseStatResult):
         return tuple((value.key, value.value) for value in result.values)
     if not isinstance(result, dict):
@@ -55,9 +58,11 @@ def normalize_stat_result(stat_id: str, result: object) -> tuple[tuple[str | Non
 def compute_stat(stat_id: str, result: object) -> ComputedStat:
     """Compute one neutral stat result."""
 
+    metadata = dict(result.metadata) if isinstance(result, (BaseStatResult, ComputedStat)) else {}
     return ComputedStat(
         stat_id=stat_id,
         values=tuple(StatValue(key, value) for key, value in normalize_stat_result(stat_id, result)),
+        metadata=metadata,
     )
 
 

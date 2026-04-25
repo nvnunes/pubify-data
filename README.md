@@ -6,6 +6,15 @@ It provides decorators, entrypoint discovery, dependency-aware runtime execution
 
 Downstream packages, such as `pubify-pubs`, use `pubify-data` to implement their own CLI and rendering workflows.
 
+## Documentation
+
+- [Architecture](docs/architecture.md): package boundaries, public runtime contracts, adapter flow, and downstream ownership.
+- [API Reference](docs/api.md): generated reference for the supported package-root API.
+- [Development](docs/development.md): local environment, daily commands, packaging, and ownership reminders.
+- [Testing](docs/testing.md): package tests, strict docs build, and downstream smoke-test expectations.
+- [Contributing](CONTRIBUTING.md): contributor workflow entry point.
+- [Changelog](CHANGELOG.md): release history.
+
 ## Downstream Integration
 
 A downstream package resolves its own workspace schema first, then passes a

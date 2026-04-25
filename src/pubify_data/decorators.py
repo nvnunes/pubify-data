@@ -8,7 +8,6 @@ def figure(func: Callable) -> Callable:
     """Mark a callable as a computed figure entrypoint."""
 
     setattr(func, "__pubify_data_figure__", True)
-    setattr(func, "__pubs_figure__", True)
     return func
 
 
@@ -16,7 +15,6 @@ def stat(func: Callable) -> Callable:
     """Mark a callable as a computed stat entrypoint."""
 
     setattr(func, "__pubify_data_stat__", True)
-    setattr(func, "__pubs_stat__", True)
     return func
 
 
@@ -24,7 +22,6 @@ def table(func: Callable) -> Callable:
     """Mark a callable as a computed table entrypoint."""
 
     setattr(func, "__pubify_data_table__", True)
-    setattr(func, "__pubs_table__", True)
     return func
 
 
@@ -34,7 +31,6 @@ def data(*args: str, nocache: bool = False, **paths: str) -> Callable[[Callable]
     metadata = _loader_metadata("data", None, "@data", args, paths, nocache=nocache)
     def decorate(func: Callable) -> Callable:
         setattr(func, "__pubify_data_loader__", metadata)
-        setattr(func, "__pubs_loader__", metadata)
         return func
     return decorate
 
@@ -47,7 +43,6 @@ def external_data(root_name: str, *args: str, nocache: bool = False, **paths: st
     metadata = _loader_metadata("external_data", root_name, "@external_data", args, paths, nocache=nocache)
     def decorate(func: Callable) -> Callable:
         setattr(func, "__pubify_data_loader__", metadata)
-        setattr(func, "__pubs_loader__", metadata)
         return func
     return decorate
 
