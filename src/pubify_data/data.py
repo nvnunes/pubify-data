@@ -80,11 +80,15 @@ def save_publication_data_npz(
 
 
 def _validate_publication_relative_path(relative_path: str) -> Path:
+    if not isinstance(relative_path, str) or not relative_path.strip():
+        raise ValueError("Publication data path must be a non-empty relative path")
     path = Path(relative_path)
     if path.is_absolute():
         raise ValueError(f"Publication data path must be relative, not absolute: {relative_path}")
     if ".." in path.parts:
         raise ValueError(f"Publication data path must stay under the publication data root: {relative_path}")
+    if path.as_posix() in {"", "."}:
+        raise ValueError("Publication data path must be a non-empty relative path")
     return path
 
 

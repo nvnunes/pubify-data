@@ -8,12 +8,13 @@ Downstream packages, such as `pubify-pubs`, use `pubify-data` to implement their
 
 ## Documentation
 
-- [Architecture](docs/architecture.md): package boundaries, public runtime contracts, adapter flow, and downstream ownership.
-- [API Reference](docs/api.md): generated reference for the supported package-root API.
-- [Development](docs/development.md): local environment, daily commands, packaging, and ownership reminders.
-- [Testing](docs/testing.md): package tests, strict docs build, and downstream smoke-test expectations.
-- [Contributing](CONTRIBUTING.md): contributor workflow entry point.
-- [Changelog](CHANGELOG.md): release history.
+- [Docs home](https://nvnunes.github.io/pubify-data/)
+- [Architecture](https://nvnunes.github.io/pubify-data/architecture/): package boundaries, public runtime contracts, adapter flow, and downstream ownership.
+- [API Reference](https://nvnunes.github.io/pubify-data/api/): generated reference for the supported package-root API.
+- [Development](https://nvnunes.github.io/pubify-data/development/): local environment, daily commands, packaging, and ownership reminders.
+- [Testing](https://nvnunes.github.io/pubify-data/testing/): package tests, strict docs build, and downstream smoke-test expectations.
+- [Contributing](https://github.com/nvnunes/pubify-data/blob/main/CONTRIBUTING.md): contributor workflow entry point.
+- [Changelog](https://github.com/nvnunes/pubify-data/blob/main/CHANGELOG.md): release history.
 
 ## Downstream Integration
 

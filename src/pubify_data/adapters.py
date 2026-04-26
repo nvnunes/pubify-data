@@ -38,7 +38,7 @@ class PublicationAdapter:
     data_root: Path
     publication_root: Path | None = None
     external_data_roots: Mapping[str, Path | str] = field(default_factory=dict)
-    source_roots: Mapping[str, Path | str] = field(default_factory=dict)
+    source_adapters: Mapping[str, "PublicationAdapter"] = field(default_factory=dict)
     workspace: WorkspaceAdapter | None = None
 
     def __post_init__(self) -> None:
@@ -48,12 +48,12 @@ class PublicationAdapter:
         publication_root = Path(self.publication_root).expanduser() if self.publication_root is not None else entrypoint.parent
         data_root = Path(self.data_root).expanduser()
         external_data_roots = _normalize_external_roots(self.external_data_roots)
-        source_roots = _normalize_source_roots(self.source_roots, publication_root, self.workspace)
+        source_adapters = _normalize_source_adapters(self.source_adapters)
         object.__setattr__(self, "entrypoint", entrypoint)
         object.__setattr__(self, "publication_root", publication_root)
         object.__setattr__(self, "data_root", data_root)
         object.__setattr__(self, "external_data_roots", external_data_roots)
-        object.__setattr__(self, "source_roots", source_roots)
+        object.__setattr__(self, "source_adapters", source_adapters)
 
 
 class ArtifactWriter(Protocol):
@@ -86,7 +86,6 @@ def publication_adapter_from_legacy(
         entrypoint=entrypoint,
         data_root=Path(data_root),
         external_data_roots=getattr(config, "external_data_roots", {}),
-        source_roots=getattr(config, "sources", {}),
     )
 
 
@@ -99,18 +98,16 @@ def _normalize_external_roots(external_data_roots: Mapping[str, Path | str]) -> 
     return normalized
 
 
-def _normalize_source_roots(
-    source_roots: Mapping[str, Path | str],
-    publication_root: Path,
-    workspace: WorkspaceAdapter | None,
-) -> dict[str, Path]:
-    normalized: dict[str, Path] = {}
-    for name, root in source_roots.items():
+def _normalize_source_adapters(source_adapters: Mapping[str, PublicationAdapter]) -> dict[str, PublicationAdapter]:
+    normalized: dict[str, PublicationAdapter] = {}
+    for name, adapter in source_adapters.items():
         if not isinstance(name, str) or not name:
             raise ValueError("Source publication names must be non-empty strings")
-        root_path = Path(root).expanduser()
-        if not root_path.is_absolute():
-            base = workspace.workspace_root if workspace is not None else publication_root
-            root_path = (base / root_path).resolve()
-        normalized[name] = root_path
+        if not isinstance(adapter, PublicationAdapter):
+            raise TypeError("Source publication adapters must be PublicationAdapter instances")
+        if adapter.publication_id != name:
+            raise ValueError(
+                f"Source publication adapter id '{adapter.publication_id}' does not match source name '{name}'"
+            )
+        normalized[name] = adapter
     return normalized

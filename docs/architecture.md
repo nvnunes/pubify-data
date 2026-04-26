@@ -15,11 +15,17 @@ Primary public entrypoints are:
 - decorators: `data`, `external_data`, `figure`, `stat`, `table`
 - config helpers: `find_workspace_root`, `load_pubify_config`, `load_config_section`
 - adapter contracts: `WorkspaceAdapter`, `PublicationAdapter`, `ArtifactWriter`
-- discovery helpers: `load_publication_from_entrypoint`, `discover_publication`
-- runtime helpers: `build_run_context`, `resolve_loader`, `validate_dependencies`, `run_figures`, `run_stats`, `run_tables`
+- discovery models and helpers: `LoaderSpec`, `FigureSpec`, `StatSpec`,
+  `TableSpec`, `PublicationDefinition`, `load_publication_from_entrypoint`,
+  `discover_publication`
+- runtime models and helpers: `RunContext`, `UserCodeExecutionError`,
+  `build_run_context`, `resolve_loader`, `validate_dependencies`,
+  `run_figures`, `run_stats`, `run_tables`, `figure_ids`, `stat_ids`,
+  `table_ids`
 - data helpers: `publication_data_path`, `save_publication_data_npz`, `load_publication_data_npz`
 - artifact namespace helpers: `artifact_namespace_root`, `artifact_namespace_path`
-- result models: `BaseFigureResult`, `FigurePanel`, `BaseStatResult`, `BaseTableResult`
+- result models: `BaseFigureResult`, `FigurePanel`, `panel`, `BaseStatResult`,
+  `StatValue`, `ComputedStat`, `BaseTableResult`, `ComputedTable`
 - CLI helpers: `CommandRegistry`, `CoreCommandContext`, `register_core_commands`
 
 ## Downstream Adapters
@@ -31,7 +37,9 @@ The expected adapter flow is:
 1. A downstream package finds its workspace and parses its own config section.
 2. It resolves publication roots, the entrypoint path, the pinned data root, and
    any named external data roots.
-3. It builds a `WorkspaceAdapter` and `PublicationAdapter`.
+3. It builds a `WorkspaceAdapter` and `PublicationAdapter`. Source publications,
+   when present, are supplied as explicit `PublicationAdapter` instances in
+   `PublicationAdapter.source_adapters`.
 4. It calls `load_publication_from_entrypoint(...)`.
 5. It runs neutral runtime helpers and converts neutral results into
    downstream-specific files, renderers, or build artifacts.
@@ -50,7 +58,7 @@ adapter = PublicationAdapter(
 publication = load_publication_from_entrypoint(publication_id, adapter=adapter)
 ```
 
-`PublicationAdapter.source_roots` may declare other pubify publication roots as
+`PublicationAdapter.source_adapters` may declare other pubify publications as
 code dependencies. Source outputs are accessed through
 `ctx.source("<source-id>")` inside local wrapper functions; `pubify-data` does
 not expose source-qualified artifact IDs as downstream-facing figure/stat/table

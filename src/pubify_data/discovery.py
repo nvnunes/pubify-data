@@ -112,16 +112,7 @@ def discover_publication(
 
 def _load_source_publications(adapter: PublicationAdapter) -> dict[str, PublicationDefinition]:
     sources: dict[str, PublicationDefinition] = {}
-    for source_id, source_root in adapter.source_roots.items():
-        entrypoint = source_root / "figures.py"
-        data_root = source_root / "data"
-        source_adapter = PublicationAdapter(
-            publication_id=source_id,
-            publication_root=source_root,
-            entrypoint=entrypoint,
-            data_root=data_root,
-            workspace=adapter.workspace,
-        )
+    for source_id, source_adapter in adapter.source_adapters.items():
         sources[source_id] = load_publication_from_entrypoint(source_id, adapter=source_adapter)
     return sources
 

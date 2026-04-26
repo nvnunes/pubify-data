@@ -1,4 +1,5 @@
 site_name: pubify-data
+site_url: https://nvnunes.github.io/pubify-data/
 site_description: TeX-agnostic publication data and artifact runtime
 repo_url: https://github.com/nvnunes/pubify-data
 nav:

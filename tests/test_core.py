@@ -71,10 +71,16 @@ def test_artifact_namespace_helpers_reject_paths_outside_data_root(tmp_path: Pat
         artifact_namespace_root(data_root, "/absolute")
     with pytest.raises(ValueError, match="must stay under the publication data root"):
         artifact_namespace_root(data_root, "../outside")
+    with pytest.raises(ValueError, match="must be a non-empty relative path"):
+        artifact_namespace_root(data_root, "")
+    with pytest.raises(ValueError, match="must be a non-empty relative path"):
+        artifact_namespace_root(data_root, ".")
     with pytest.raises(ValueError, match="must be relative, not absolute"):
         artifact_namespace_path(data_root, "artifacts", "/absolute")
     with pytest.raises(ValueError, match="must stay under the publication data root"):
         artifact_namespace_path(data_root, "artifacts", "../outside")
+    with pytest.raises(ValueError, match="must be a non-empty relative path"):
+        artifact_namespace_path(data_root, "artifacts", "")
 
 
 def test_decorators_and_runtime_execute_loader_dependencies(tmp_path: Path) -> None:
@@ -140,10 +146,11 @@ def test_base_result_types_normalize_figures_stats_and_tables(tmp_path: Path) ->
 
 def test_source_publications_are_reused_through_local_wrapper_code(tmp_path: Path) -> None:
     source_root = tmp_path / "papers" / "ao4elt8"
-    source_data = source_root / "data"
+    source_data = source_root / "custom-data"
     source_data.mkdir(parents=True)
     (source_data / "value.txt").write_text("source", encoding="utf-8")
-    (source_root / "figures.py").write_text(
+    source_entrypoint = source_root / "entry.py"
+    source_entrypoint.write_text(
         "\n".join([
             "from pubify_data import data, figure, stat",
             "@data('value.txt')",
@@ -182,7 +189,14 @@ def test_source_publications_are_reused_through_local_wrapper_code(tmp_path: Pat
         entrypoint=entrypoint,
         publication_root=presentation_root,
         data_root=presentation_data,
-        source_roots={"ao4elt8": source_root},
+        source_adapters={
+            "ao4elt8": PublicationAdapter(
+                "ao4elt8",
+                publication_root=source_root,
+                entrypoint=source_entrypoint,
+                data_root=source_data,
+            ),
+        },
     )
     publication = load_publication_from_entrypoint("talk", adapter=adapter)
 
@@ -454,3 +468,6 @@ def test_npz_helpers_use_downstream_resolver(tmp_path: Path) -> None:
 
     assert saved == tmp_path / "output" / "demo" / "sample.npz"
     assert np.array_equal(load_publication_data_npz(saved)["values"], np.array([1.0]))
+
+    with pytest.raises(ValueError, match="must be a non-empty relative path"):
+        save_publication_data_npz("demo", "", workspace_root=tmp_path, data_root_resolver=resolver, values=np.array([1.0]))
